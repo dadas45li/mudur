@@ -108,6 +108,13 @@ def create_directory(path):
     if not os.path.exists(path):
         os.makedirs(path)
 
+def create_link(src, dest, hardLink=False):
+    """Create link from src to dest. """
+    if harLink:
+        os.link(src, dest)
+    else:
+        os.symlink(src, dest)
+
 def mtime(filename):
     """Returns the last modification time of a file."""
     m_time = 0
@@ -759,17 +766,19 @@ def start_dbus():
     UI.info(_("Starting %s") % "DBus")
     if not os.path.exists("/var/lib/dbus/machine-id"):
         run("/usr/bin/dbus-uuidgen", "--ensure")
+    if not os.path.exists("/run/dbus"):
+        create_directory("/run/dbus")
     run("/sbin/start-stop-daemon", "-b", "--start", "--quiet",
-        "--pidfile", "/var/run/dbus/pid", "--exec", "/usr/bin/dbus-daemon",
+        "--pidfile", "/run/dbus/pid", "--exec", "/usr/bin/dbus-daemon",
         "--", "--system")
-    wait_bus("/var/run/dbus/system_bus_socket")
+    wait_bus("/run/dbus/system_bus_socket")
 
 @plymouth_update_milestone
 def stop_dbus():
     """Stops the D-Bus service."""
     UI.info(_("Stopping %s") % "DBus")
     run("/sbin/start-stop-daemon", "--stop", "--quiet",
-            "--pidfile", "/var/run/dbus/pid")
+            "--pidfile", "/run/dbus/pid")
 
 #############################
 # UDEV management functions #
@@ -817,7 +826,8 @@ def start_udev():
 
     # When these files are missing, lots of trouble happens
     # so we double check their existence
-    create_directory("/dev/shm")
+    create_directory("/run/shm")
+    create_link("/run/shm", "/dev/shm")
 
     # Start udev daemon
     UI.info(_("Starting udev"))
@@ -1371,12 +1381,16 @@ def main():
         wait_for_udev_events()
 
         # When we exit this runlevel, init will write a boot record to utmp
-        write_to_file("/var/run/utmp")
+        write_to_file("/run/utmp")
         touch("/var/log/wtmp")
 
-        run("/bin/chgrp", "utmp", "/var/run/utmp", "/var/log/wtmp")
+        create_directory("/run/lock")
+        create_directory("/run/lock/subsys")
+        create_directory("/run/pardus")
 
-        os.chmod("/var/run/utmp", 0664)
+        run("/bin/chgrp", "utmp", "/run/utmp", "/var/log/wtmp")
+
+        os.chmod("/run/utmp", 0664)
         os.chmod("/var/log/wtmp", 0664)
 
     ### BOOT ###
