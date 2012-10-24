@@ -110,7 +110,7 @@ def create_directory(path):
 
 def create_link(src, dest, hardLink=False):
     """Create link from src to dest. """
-    if harLink:
+    if hardLink:
         os.link(src, dest)
     else:
         os.symlink(src, dest)
